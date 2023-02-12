@@ -63,6 +63,7 @@ export const buttonSave = styled.TouchableOpacity`
   margin-top: 30px;
   align-items: center;
   justify-content: center;
+  border-radius: 5px;
 `;
 
 export const boxTipo = styled.View`
@@ -76,4 +77,10 @@ export const boxTipo = styled.View`
 export const titleSave = styled.Text`
   color: ${cor.dark[1]};
   font-weight: 600;
+`;
+
+export const contentButton = styled.View`
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
 `;

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import fire from "@react-native-firebase/firestore";
-import { FlatList } from "react-native";
+import { FlatList, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Tipo } from "../../components/tipo";
 import { ICategory, IModel, IType } from "../../dto";
@@ -18,12 +18,12 @@ export function Home() {
 
   const [type, setType] = useState<IType[]>([]);
   const [category, setCategory] = useState<ICategory[]>([]);
+  const [models, setModels] = useState<IModel[]>([]);
 
-  useEffect(() => {
+  const loadData = useCallback(() => {
     fire()
       .collection("type")
-      .get()
-      .then((j) => {
+      .onSnapshot((j) => {
         const rs = j.docs.map((h) => {
           return {
             ...h.data(),
@@ -41,8 +41,7 @@ export function Home() {
 
     fire()
       .collection("category")
-      .get()
-      .then((j) => {
+      .onSnapshot((j) => {
         const rs = j.docs.map((h) => {
           return {
             ...h.data(),
@@ -59,7 +58,31 @@ export function Home() {
           });
         setCategory(res);
       });
-  }, [selectType]);
+
+    fire()
+      .collection("model")
+      .onSnapshot((j) => {
+        const rs = j.docs.map((h) => {
+          return {
+            ...h.data(),
+            id: h.id,
+          } as IModel;
+        });
+        const res = rs
+          .filter((h) => h.category === selectCategory)
+          .sort((a, b) => {
+            if (a.category! < b.category!) {
+              return -1;
+            }
+            return 1;
+          });
+        setModels(res);
+      });
+  }, [selectCategory, selectType]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const listCategory = useMemo(() => {
     const ct = category.find((h) => h.category === selectCategory);
@@ -72,18 +95,18 @@ export function Home() {
       const index = listCategory!.models.findIndex((i) => i.id === item.id);
       const arrIndex = [...listCategory!.models];
 
-      if (index !== -1) {
-        arrIndex.map((h) => {
-          return h.models.splice(index, 1);
-        });
+      // if (index !== -1) {
+      //   arrIndex.map((h) => {
+      //     return h.models.splice(index, 1);
+      //   });
 
-        setCategory(arrIndex);
-      }
+      //   setCategory(arrIndex);
+      // }
     },
     [category, listCategory]
   );
 
-  const handleEdit = useCallback(() => {
+  const handleEdit = useCallback((id: string) => {
     // type: "Blusa",
     // category: "malha",
     // description: "Blusas que cabem no seu corpo",
@@ -91,46 +114,67 @@ export function Home() {
 
   return (
     <S.container>
-      <FlatList
-        horizontal
-        contentContainerStyle={{
-          paddingHorizontal: 10,
-        }}
-        data={type}
-        keyExtractor={(h) => h.id}
-        renderItem={({ item: h }) => (
-          <Tipo
-            pres={() => setSelectType(h.type)}
-            title={h.type}
-            select={selectType === h.type}
+      {type ? (
+        <View style={{ flex: 1 }}>
+          <View>
+            <FlatList
+              horizontal
+              contentContainerStyle={{
+                paddingHorizontal: 10,
+              }}
+              data={type}
+              keyExtractor={(h) => h.id}
+              renderItem={({ item: h }) => (
+                <Tipo
+                  pres={() => setSelectType(h.type)}
+                  title={h.type}
+                  select={selectType === h.type}
+                />
+              )}
+            />
+          </View>
+
+          <View>
+            <FlatList
+              horizontal
+              contentContainerStyle={{
+                paddingHorizontal: 10,
+              }}
+              data={category}
+              keyExtractor={(h) => h.id}
+              renderItem={({ item: h }) => (
+                <CategoryComponent
+                  pres={() => setSelectCategory(h.category)}
+                  title={h.category}
+                  select={selectCategory === h.category}
+                />
+              )}
+            />
+          </View>
+
+          <FlatList
+            data={models}
+            keyExtractor={(h) => h.id}
+            renderItem={({ item: h }) => (
+              <Lista excluir={() => handleDelete(h)} item={h} />
+            )}
           />
-        )}
-      />
-
-      <FlatList
-        horizontal
-        contentContainerStyle={{
-          paddingHorizontal: 10,
-        }}
-        data={category}
-        keyExtractor={(h) => h.id}
-        renderItem={({ item: h }) => (
-          <CategoryComponent
-            pres={() => setSelectCategory(h.category)}
-            title={h.category}
-            select={selectCategory === h.category}
-          />
-        )}
-      />
-
-      <FlatList
-        data={listCategory?.models}
-        keyExtractor={(h) => h.id}
-        renderItem={({ item: h }) => (
-          <Lista excluir={() => handleDelete(h)} item={h} />
-        )}
-      />
-
+        </View>
+      ) : (
+        <View
+          style={{
+            flex: 1,
+            padding: 20,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Text style={{ fontSize: 25, textAlign: "center" }}>
+            Você não tem nada cadastrado, clique no botão 'add' para cadastrar
+            suas roupas
+          </Text>
+        </View>
+      )}
       <S.bottonAdd onPress={() => nv.navigate("edit")}>
         <S.title>add</S.title>
       </S.bottonAdd>

@@ -15,7 +15,7 @@ export const container = styled.TouchableOpacity<PropsSelect>`
   align-items: center;
   justify-content: center;
 
-  background-color: ${(h) => (h.select ? cor.green[1] : cor.green[3])};
+  background-color: ${(h) => (h.select ? cor.green[1] : cor.green[4])};
   border-radius: 5px;
 `;
 

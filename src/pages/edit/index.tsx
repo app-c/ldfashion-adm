@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import storage from "@react-native-firebase/storage";
+import { useNavigation } from "@react-navigation/native";
 import { CategoryComponent } from "../../components/categoryComponent";
 import { Select } from "../../components/select";
 import { Tipo } from "../../components/tipo";
@@ -34,6 +35,7 @@ interface PropsTall {
 }
 
 export function Edit() {
+  const nv = useNavigation();
   const [select, setSelect] = useState(0);
   const [cat, setCat] = useState(0);
   const [tal, setTall] = useState<PropsTall>({ tal: "P" });
@@ -45,19 +47,16 @@ export function Edit() {
   const [description, setDescription] = useState("");
 
   const [image, setImage] = useState("");
+  const [selectType, setSelecttype] = useState("");
+  const [selectCategory, setSelectCategory] = useState("");
 
-  const [type, setType] = useState<PropsType>({ type: [], select: "" });
-  const [category, setCategory] = useState<PropsCategory>({
-    category: [],
-    select: "",
-    one: {} as ICategory,
-  });
+  const [type, setType] = useState<IType[]>([]);
+  const [category, setCategory] = useState<ICategory[]>([]);
 
-  useEffect(() => {
+  const loadData = useCallback(() => {
     fire()
       .collection("type")
-      .get()
-      .then((j) => {
+      .onSnapshot((j) => {
         const rs = j.docs.map((h) => {
           return {
             ...h.data(),
@@ -70,13 +69,12 @@ export function Edit() {
           }
           return 1;
         });
-        setType({ type: res, select: type.select });
+        setType(res);
       });
 
     fire()
       .collection("category")
-      .get()
-      .then((j) => {
+      .onSnapshot((j) => {
         const rs = j.docs.map((h) => {
           return {
             ...h.data(),
@@ -84,20 +82,22 @@ export function Edit() {
           } as ICategory;
         });
         const res = rs
-          .filter((h) => h.type === type.select)
+          .filter((h) => h.type === selectType)
           .sort((a, b) => {
             if (a.category < b.category) {
               return -1;
             }
             return 1;
           });
-        setCategory({
-          category: res,
-          select: category.select,
-          one: category.one,
-        });
+        setCategory(res);
       });
-  }, [category.select, type.select]);
+  }, [selectType]);
+
+  console.log(selectType);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleImage = useCallback(async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -112,53 +112,67 @@ export function Edit() {
   }, []);
 
   const handleExistent = useCallback(async () => {
-    if (stok === "" && amount === "" && !!category.one.category) {
-      return Alert.alert("Erro", "Preença todos os campos");
+    if (stok === "" && amount === "" && category.one.category) {
+      return Alert.alert("Erro", "Preença os campos volor e estoque");
     }
 
-    try {
-      const ref = storage().ref(`image/${image}.png`);
-      await ref.delete();
-    } catch (error) {
-      console.log(error);
-    }
+    // try {
+    //   const ref = storage().ref(`image/${image}.png`);
+    //   await ref.delete();
+    // } catch (error) {
+    //   console.log(error);
+    // }
 
-    const reference = storage().ref(`/image/${image}.png`);
+    // const reference = storage().ref(`/image/${image}.png`);
 
-    await reference.putFile(image);
-    const photoUrl = await reference.getDownloadURL();
+    // await reference.putFile(image);
+    // const photoUrl = await reference.getDownloadURL();
+
+    const ctg = category.find((h) => h.category === selectCategory);
 
     const rs = {
       tamanho: tal.tal,
       quantity: stok,
       amount,
-      image: photoUrl,
-      description: category.one.description,
-      category: category.one.category,
+      image: "photoUrl",
+      description: ctg?.description,
+      category: selectCategory,
     };
 
-    console.log(rs);
-  }, [
-    amount,
-    category.one.category,
-    category.one.description,
-    image,
-    stok,
-    tal.tal,
-  ]);
+    fire()
+      .collection("model")
+      .add(rs)
+      .then(() => {
+        Alert.alert("Sucesso", "Novo item salvo");
+        nv.navigate("home");
+      });
+  }, [amount, category, nv, selectCategory, stok, tal.tal]);
 
   const addType = useCallback(() => {
+    fire().collection("type").add({ type: tp });
     setSelect(0);
-  }, []);
+  }, [tp]);
 
-  const addcategoria = useCallback(() => {
-    setCat(0);
-  }, []);
+  const addcategoria = useCallback(
+    (type: string) => {
+      const rs = {
+        type,
+        description,
+        category: ct,
+      };
+
+      fire().collection("category").add(rs);
+      setCat(0);
+      setSelectCategory("");
+    },
+    [ct, description]
+  );
 
   return (
     <S.container>
       <ScrollView>
         <S.boxExistent>
+          {/* TIPO DE ROUTE */}
           <S.boxTipo>
             <S.title
               style={{
@@ -176,19 +190,16 @@ export function Edit() {
               contentContainerStyle={{
                 paddingHorizontal: 5,
               }}
-              data={type.type}
+              data={type}
               keyExtractor={(h) => h.id}
               renderItem={({ item: h }) => (
                 <Tipo
                   pres={() => {
-                    const rs = {
-                      type: type.type,
-                      select: h.type,
-                    };
-                    setType(rs);
+                    setSelecttype(h.type);
+                    setSelectCategory("");
                   }}
                   title={h.type}
-                  select={type.select === h.type}
+                  select={selectType === h.type}
                 />
               )}
             />
@@ -207,15 +218,27 @@ export function Edit() {
                   onChangeText={setTp}
                   placeholder="digite o nome do TIPO de roupa"
                 />
+                <S.contentButton>
+                  <S.buttonSave
+                    style={{ width: 140, backgroundColor: cor.alert[2] }}
+                    onPress={() => setSelect(0)}
+                  >
+                    <S.titleSave>Cancelar</S.titleSave>
+                  </S.buttonSave>
 
-                <S.buttonSave onPress={addType}>
-                  <S.titleSave>Salvar</S.titleSave>
-                </S.buttonSave>
+                  <S.buttonSave
+                    style={{ width: 140, backgroundColor: cor.green[2] }}
+                    onPress={addType}
+                  >
+                    <S.titleSave>Salvar</S.titleSave>
+                  </S.buttonSave>
+                </S.contentButton>
               </View>
             )}
           </S.boxTipo>
 
-          {select === 0 && (
+          {/* CATEGORIA */}
+          {selectType !== "" && (
             <S.boxTipo>
               <S.title
                 style={{
@@ -228,24 +251,19 @@ export function Edit() {
               >
                 Categorias disponiveis
               </S.title>
+
               <FlatList
                 horizontal
                 contentContainerStyle={{
                   paddingHorizontal: 5,
                 }}
-                data={category.category}
+                data={category}
                 keyExtractor={(h) => h.id}
                 renderItem={({ item: h }) => (
                   <CategoryComponent
-                    pres={() =>
-                      setCategory({
-                        category: category.category,
-                        select: h.category,
-                        one: h,
-                      })
-                    }
+                    pres={() => setSelectCategory(h.category)}
                     title={h.category}
-                    select={category.select === h.category}
+                    select={selectCategory === h.category}
                   />
                 )}
               />
@@ -269,16 +287,39 @@ export function Edit() {
                     placeholder="escreva uma descriçao"
                   />
 
-                  <S.buttonSave onPress={addType}>
-                    <S.titleSave>Salvar</S.titleSave>
-                  </S.buttonSave>
+                  <S.contentButton>
+                    <S.buttonSave
+                      style={{ width: 140, backgroundColor: cor.alert[2] }}
+                      onPress={() => setCat(0)}
+                    >
+                      <S.titleSave>Cancelar</S.titleSave>
+                    </S.buttonSave>
+
+                    <S.buttonSave
+                      style={{ width: 140, backgroundColor: cor.green[2] }}
+                      onPress={() => addcategoria(selectType)}
+                    >
+                      <S.titleSave>Salvar</S.titleSave>
+                    </S.buttonSave>
+                  </S.contentButton>
                 </View>
               )}
             </S.boxTipo>
           )}
 
-          {cat === 0 && (
+          {cat === 0 && selectCategory !== "" && (
             <S.boxTipo>
+              <S.title
+                style={{
+                  marginBottom: 10,
+                  alignSelf: "center",
+                  color: cor.dark[4],
+                  fontWeight: "900",
+                  fontSize: 18,
+                }}
+              >
+                Adicionar novo item
+              </S.title>
               <S.input
                 onChangeText={setAmount}
                 keyboardType="numeric"
@@ -318,7 +359,11 @@ export function Edit() {
                 />
               </S.boxSelect>
 
-              <S.imgBox resizeMode="contain" source={{ uri: `${image}` }} />
+              {image === "" ? (
+                <S.imgBox resizeMode="contain" />
+              ) : (
+                <S.imgBox resizeMode="contain" source={{ uri: `${image}` }} />
+              )}
 
               <S.bottonImag onPress={handleImage}>
                 <S.title>Adicionar image</S.title>
