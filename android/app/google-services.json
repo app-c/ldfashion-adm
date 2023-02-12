@@ -1,0 +1,82 @@
+{
+  "project_info": {
+    "project_number": "692946713743",
+    "project_id": "ldfashion",
+    "storage_bucket": "ldfashion.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:692946713743:android:d8e3a72ac93864244984fa",
+        "android_client_info": {
+          "package_name": "com.appc.ldfashion"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "692946713743-sickoemm9i0id0ggbgjmf051h2hkchom.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAhxpQR5_goav1CBG-eh_oGgWfIjKs8i2Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "692946713743-sickoemm9i0id0ggbgjmf051h2hkchom.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "692946713743-cks5dj8vc9uhia5uou14t7pp6s6ru2jj.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.appc.ldfashion"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:692946713743:android:8740e149f5d3b4434984fa",
+        "android_client_info": {
+          "package_name": "com.appc.ldfashionadm"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "692946713743-sickoemm9i0id0ggbgjmf051h2hkchom.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAhxpQR5_goav1CBG-eh_oGgWfIjKs8i2Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "692946713743-sickoemm9i0id0ggbgjmf051h2hkchom.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "692946713743-cks5dj8vc9uhia5uou14t7pp6s6ru2jj.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.appc.ldfashion"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
