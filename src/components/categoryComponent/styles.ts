@@ -7,8 +7,7 @@ interface PropsSelect {
 
 export const container = styled.TouchableOpacity<PropsSelect>`
   padding: 10px;
-  width: 100px;
-  height: 50px;
+  height: 40px;
 
   margin: 20px 10px;
 

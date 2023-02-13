@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import fire from "@react-native-firebase/firestore";
 import {
   Alert,
@@ -81,23 +81,28 @@ export function Edit() {
             id: h.id,
           } as ICategory;
         });
-        const res = rs
-          .filter((h) => h.type === selectType)
-          .sort((a, b) => {
-            if (a.category < b.category) {
-              return -1;
-            }
-            return 1;
-          });
-        setCategory(res);
-      });
-  }, [selectType]);
 
-  console.log(selectType);
+        setCategory(rs);
+      });
+  }, []);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const list = useMemo(() => {
+    setSelectCategory("");
+    const lc = category
+      .filter((h) => h.type === selectType)
+      .sort((a, b) => {
+        if (a.category < b.category) {
+          return -1;
+        }
+        return 1;
+      });
+
+    return { lc };
+  }, [category, selectType]);
 
   const handleImage = useCallback(async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -108,33 +113,33 @@ export function Edit() {
     if (result.assets) {
       setImage(result.assets[0].uri);
     }
-    console.log(result.assets);
   }, []);
 
   const handleExistent = useCallback(async () => {
-    if (stok === "" && amount === "" && category.one.category) {
+    if (stok === "" && amount === "" && selectCategory === "") {
       return Alert.alert("Erro", "Preença os campos volor e estoque");
     }
 
+    const referenc = "lksdflsdfklj";
     // try {
     //   const ref = storage().ref(`image/${image}.png`);
     //   await ref.delete();
     // } catch (error) {
     //   console.log(error);
     // }
-
-    // const reference = storage().ref(`/image/${image}.png`);
-
-    // await reference.putFile(image);
-    // const photoUrl = await reference.getDownloadURL();
-
+    const ref = new Date().getTime();
     const ctg = category.find((h) => h.category === selectCategory);
+
+    const reference = storage().ref(`/image/${image}`);
+
+    await reference.putFile(image);
+    const photoUrl = await reference.getDownloadURL();
 
     const rs = {
       tamanho: tal.tal,
       quantity: stok,
       amount,
-      image: "photoUrl",
+      image: photoUrl,
       description: ctg?.description,
       category: selectCategory,
     };
@@ -146,7 +151,7 @@ export function Edit() {
         Alert.alert("Sucesso", "Novo item salvo");
         nv.navigate("home");
       });
-  }, [amount, category, nv, selectCategory, stok, tal.tal]);
+  }, [amount, category, image, nv, selectCategory, stok, tal.tal]);
 
   const addType = useCallback(() => {
     fire().collection("type").add({ type: tp });
@@ -163,7 +168,6 @@ export function Edit() {
 
       fire().collection("category").add(rs);
       setCat(0);
-      setSelectCategory("");
     },
     [ct, description]
   );
@@ -257,7 +261,7 @@ export function Edit() {
                 contentContainerStyle={{
                   paddingHorizontal: 5,
                 }}
-                data={category}
+                data={list.lc}
                 keyExtractor={(h) => h.id}
                 renderItem={({ item: h }) => (
                   <CategoryComponent

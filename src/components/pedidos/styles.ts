@@ -14,6 +14,8 @@ const variant = {
 
 export const container = styled.View`
   padding: 20px;
+  background-color: ${cor.dark[5]};
+  margin-top: 10px;
 `;
 
 export const box = styled.View`
@@ -22,7 +24,7 @@ export const box = styled.View`
 
 export const imgBox = styled.Image`
   width: 150px;
-  height: 120px
+  height: 120px;
 
   background-color: ${cor.dark[2]};
   border-radius: 5px;
@@ -50,5 +52,5 @@ export const textButon = styled.Text`
 `;
 
 export const title = styled.Text`
-  font-size: 20px;
+  font-size: 16px;
 `;

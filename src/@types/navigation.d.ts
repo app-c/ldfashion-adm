@@ -16,6 +16,7 @@ export declare global {
     interface RootParamList {
       home: undefined;
       edit: undefined;
+      modelEdit: undefined;
     }
   }
 }

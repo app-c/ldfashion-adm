@@ -13,9 +13,11 @@ export function Lista({ item = {} as IModel, edit, excluir }: Props) {
   return (
     <S.container>
       <S.box>
-        <S.imgBox>
-          <S.title>{item.image}</S.title>
-        </S.imgBox>
+        <S.imgBox
+          resizeMode="cover"
+          resizeMethod="scale"
+          source={{ uri: item.image }}
+        />
 
         <S.boxText>
           <S.title>Estoque: {item.quantity}</S.title>

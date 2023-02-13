@@ -18,6 +18,7 @@ export interface IModel {
   category?: string;
   user?: IUser;
   qntBuy?: number;
+  buyItemid?: string;
 }
 
 export interface ICategory {
