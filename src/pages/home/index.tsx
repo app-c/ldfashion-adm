@@ -1,10 +1,12 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import fire from "@react-native-firebase/firestore";
-import { FlatList, Modal, Text, View } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { FlatList, Modal, Platform, Text, View } from "react-native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 import storage from "@react-native-firebase/storage";
+import * as Device from "expo-device";
+import * as Notifications from "expo-notifications";
 import { Tipo } from "../../components/tipo";
 import { ICategory, IModel, IType } from "../../dto";
 
@@ -24,6 +26,14 @@ interface PropsMoal {
   showC: boolean;
 }
 
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: false,
+    shouldSetBadge: false,
+  }),
+});
+
 export function Home() {
   const nv = useNavigation();
 
@@ -37,11 +47,12 @@ export function Home() {
   const [modalCat, setModalCat] = useState(false);
   const [modalModels, setModalModels] = useState(false);
 
+  const [show, setShow] = useState<PropsMoal>({ showC: false, showM: false });
   const [qnt, setQnt] = useState("1");
   const [amount, setAmount] = useState("0");
   const [description, setDescription] = useState("");
+  const [token, setToken] = useState("");
 
-  const [show, setShow] = useState<PropsMoal>({ showC: false, showM: false });
   const [img, setImg] = useState("");
 
   const loadData = useCallback(() => {
@@ -160,6 +171,59 @@ export function Home() {
     console.log(result.assets);
   }, []);
 
+  const handleEditDescription = useCallback(() => {
+    console.log(selectCategory);
+    fire()
+      .collection("category")
+      .doc(selectCategory?.ct.id)
+      .update({ description })
+      .then((h) => {
+        setShow({ showC: false, showM: false });
+      });
+  }, [description, show.itemC]);
+
+  async function registerForPushNotificationsAsync() {
+    let token;
+    if (Device.isDevice) {
+      const { status: existingStatus } =
+        await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      if (existingStatus !== "granted") {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+      if (finalStatus !== "granted") {
+        alert("Failed to get push token for push notification!");
+        return;
+      }
+      token = (
+        await Notifications.getExpoPushTokenAsync({
+          experienceId: "@app-c/ldfashion-adm",
+        })
+      ).data;
+      console.log(token);
+    } else {
+      alert("Must use physical device for Push Notifications");
+    }
+
+    if (Platform.OS === "android") {
+      Notifications.setNotificationChannelAsync("default", {
+        name: "default",
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: "#FF231F7C",
+      });
+    }
+
+    fire().collection("token").doc("5544").update({ token });
+  }
+
+  // useFocusEffect(
+  //   useCallback(() => {
+  //     registerForPushNotificationsAsync();
+  //   }, [])
+  // );
+
   return (
     <S.container>
       <S.contentButon
@@ -173,7 +237,7 @@ export function Home() {
         </S.button>
       </S.contentButon>
 
-      <S.modal visible={show?.showM} transparent animationType="fade">
+      <S.modal visible={show.showM} transparent animationType="fade">
         <S.containerModal>
           <S.imput
             keyboardType="numeric"
@@ -224,14 +288,33 @@ export function Home() {
         </S.containerModal>
       </S.modal>
 
-      <S.modal visible={false}>
+      <S.modal visible={show.showC}>
         <S.containerModal>
           <S.title>Alterar descrição</S.title>
-          <S.imput placeholder="descrição" />
+          <S.imput
+            onChangeText={setDescription}
+            value={description}
+            placeholder="descrição"
+          />
 
-          <S.button>
-            <S.textButon>Salvar</S.textButon>
-          </S.button>
+          <S.contentButon>
+            <S.button
+              onPress={() =>
+                setShow({
+                  showM: false,
+                  showC: false,
+                  itemC: {} as ICategory,
+                  itemM: {} as IModel,
+                })
+              }
+            >
+              <S.textButon style={{ color: cor.dark[3] }}>cancelar</S.textButon>
+            </S.button>
+
+            <S.button onPress={handleEditDescription}>
+              <S.textButon style={{ color: cor.green[3] }}>salvar</S.textButon>
+            </S.button>
+          </S.contentButon>
         </S.containerModal>
       </S.modal>
 
@@ -267,7 +350,10 @@ export function Home() {
               keyExtractor={(h) => h.id}
               renderItem={({ item: h }) => (
                 <CategoryComponent
-                  pres={() => setSelectCategory({ ct: h })}
+                  pres={() => {
+                    setSelectCategory({ ct: h });
+                    setShow({ itemC: h, showC: false, showM: false });
+                  }}
                   title={h.category}
                   select={selectCategory?.ct.category === h.category}
                 />
@@ -277,15 +363,22 @@ export function Home() {
             <Text style={{ marginLeft: 20, fontSize: 20 }}>
               {selectCategory?.ct.description}
             </Text>
-            <S.button
-              style={{
-                alignSelf: "flex-start",
-                backgroundColor: cor.green[2],
-                marginLeft: 20,
-              }}
-            >
-              <S.textButon>Editar descrição</S.textButon>
-            </S.button>
+
+            {selectCategory?.ct && (
+              <S.button
+                style={{
+                  alignSelf: "flex-start",
+                  backgroundColor: cor.green[2],
+                  marginLeft: 20,
+                }}
+              >
+                <S.textButon
+                  onPress={() => setShow({ showC: true, showM: false })}
+                >
+                  Editar descrição
+                </S.textButon>
+              </S.button>
+            )}
           </View>
 
           <FlatList
