@@ -14,6 +14,7 @@ import * as S from "./styles";
 import { CategoryComponent } from "../../components/categoryComponent";
 import { Lista } from "../../components/lista";
 import { cor } from "../../styles";
+import { currency, number } from "../../utils";
 
 interface ISelect {
   ct: ICategory;
@@ -116,6 +117,12 @@ export function Home() {
       });
 
     const lm = models
+      .map((h) => {
+        return {
+          ...h,
+          amount: currency(String(h.amount)),
+        };
+      })
       .filter((h) => h.category === selectCategory?.ct.category)
       .sort((a, b) => {
         if (a.category! < b.category!) {
@@ -142,9 +149,10 @@ export function Home() {
     }
 
     const image = img === "" ? show?.itemM?.image : photoUrl;
+    const vl = number(amount);
 
     const ds = {
-      amount: Number(amount),
+      amount: vl,
       quantity: Number(qnt),
       image,
     };
@@ -154,10 +162,10 @@ export function Home() {
       .doc(show?.itemM!.id)
       .update(ds)
       .then(() => {
-        setShow({ showM: false, itemC: {}, itemM: {} });
+        setShow({ showM: false, showC: false });
         setImg("");
       });
-  }, [amount, img, qnt, show?.itemM]);
+  }, [amount, img, qnt, show]);
 
   const handleImage = useCallback(async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -172,7 +180,6 @@ export function Home() {
   }, []);
 
   const handleEditDescription = useCallback(() => {
-    console.log(selectCategory);
     fire()
       .collection("category")
       .doc(selectCategory?.ct.id)
@@ -180,7 +187,7 @@ export function Home() {
       .then((h) => {
         setShow({ showC: false, showM: false });
       });
-  }, [description, show.itemC]);
+  }, [description, selectCategory?.ct.id]);
 
   async function registerForPushNotificationsAsync() {
     let token;
@@ -218,11 +225,11 @@ export function Home() {
     fire().collection("token").doc("5544").update({ token });
   }
 
-  // useFocusEffect(
-  //   useCallback(() => {
-  //     registerForPushNotificationsAsync();
-  //   }, [])
-  // );
+  useFocusEffect(
+    useCallback(() => {
+      registerForPushNotificationsAsync();
+    }, [])
+  );
 
   return (
     <S.container>
@@ -332,6 +339,7 @@ export function Home() {
                 <Tipo
                   pres={() => {
                     setSelectType(h.type);
+                    setSelectCategory({ ct: {} as ICategory });
                   }}
                   title={h.type}
                   select={selectType === h.type}
@@ -386,7 +394,7 @@ export function Home() {
             keyExtractor={(h) => h.id}
             renderItem={({ item: h }) => (
               <Lista
-                edit={() => setShow({ showM: true, itemM: h, itemC: {} })}
+                edit={() => setShow({ showM: true, showC: false, itemM: h })}
                 excluir={() => handleDelete(h)}
                 item={h}
               />

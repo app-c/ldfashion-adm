@@ -1,11 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import fire from "@react-native-firebase/firestore";
 import {
+  ActivityIndicator,
   Alert,
   FlatList,
-  Image,
   ScrollView,
-  TextInput,
   View,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
@@ -18,6 +17,7 @@ import { Tipo } from "../../components/tipo";
 import * as S from "./styles";
 import { ICategory, IModel, IType } from "../../dto";
 import { cor } from "../../styles";
+import { currency, number } from "../../utils";
 
 interface PropsType {
   type: IType[];
@@ -31,7 +31,15 @@ interface PropsCategory {
 }
 
 interface PropsTall {
-  tal: "P" | "M" | "G" | "GG" | "EG";
+  tal: "P" | "M" | "G" | "GG" | "G1" | "G2" | "G3";
+}
+
+interface PropsSelectType {
+  item: IType;
+}
+
+interface PropsSelectCateg {
+  item: ICategory;
 }
 
 export function Edit() {
@@ -41,14 +49,24 @@ export function Edit() {
   const [tal, setTall] = useState<PropsTall>({ tal: "P" });
   const [stok, setStok] = useState("");
   const [amount, setAmount] = useState("");
+  const [load, setLoad] = React.useState(false);
+
+  const [nameType, setNameType] = React.useState("");
+  const [nameCategory, setNameCategory] = React.useState("");
 
   const [tp, setTp] = useState("");
   const [ct, setCt] = useState("");
   const [description, setDescription] = useState("");
+  const [model, setModel] = React.useState<IModel[]>([]);
 
   const [image, setImage] = useState("");
-  const [selectType, setSelecttype] = useState("");
-  const [selectCategory, setSelectCategory] = useState("");
+
+  const [selectType, setSelecttype] = useState<PropsSelectType>({
+    item: {} as IType,
+  });
+  const [selectCateg, setSelectCateg] = useState<PropsSelectCateg>({
+    item: {} as ICategory,
+  });
 
   const [type, setType] = useState<IType[]>([]);
   const [category, setCategory] = useState<ICategory[]>([]);
@@ -73,6 +91,19 @@ export function Edit() {
       });
 
     fire()
+      .collection("model")
+      .get()
+      .then((h) => {
+        const rs = h.docs.map((p) => {
+          return {
+            ...p.data(),
+            id: p.id,
+          } as IModel;
+        });
+        setModel(rs);
+      });
+
+    fire()
       .collection("category")
       .onSnapshot((j) => {
         const rs = j.docs.map((h) => {
@@ -91,9 +122,9 @@ export function Edit() {
   }, [loadData]);
 
   const list = useMemo(() => {
-    setSelectCategory("");
+    // setSe({ item: {} as ICategory });
     const lc = category
-      .filter((h) => h.type === selectType)
+      .filter((h) => h.type === selectType.item.type)
       .sort((a, b) => {
         if (a.category < b.category) {
           return -1;
@@ -101,8 +132,10 @@ export function Edit() {
         return 1;
       });
 
-    return { lc };
-  }, [category, selectType]);
+    const lmo = model.filter((h) => h.category === selectCateg.item.category);
+
+    return { lc, lmo };
+  }, [category, model, selectCateg.item.category, selectType.item.type]);
 
   const handleImage = useCallback(async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -116,7 +149,9 @@ export function Edit() {
   }, []);
 
   const handleExistent = useCallback(async () => {
-    if (stok === "" && amount === "" && selectCategory === "") {
+    setLoad(true);
+    if (stok === "" && amount === "" && selectCateg.item.category === "") {
+      setLoad(false);
       return Alert.alert("Erro", "Preença os campos volor e estoque");
     }
 
@@ -128,30 +163,34 @@ export function Edit() {
     //   console.log(error);
     // }
     const ref = new Date().getTime();
-    const ctg = category.find((h) => h.category === selectCategory);
+    const ctg = category.find((h) => h.category === selectCateg.item.category);
 
     const reference = storage().ref(`/image/${image}`);
 
     await reference.putFile(image);
     const photoUrl = await reference.getDownloadURL();
-
+    const vl = number(amount);
     const rs = {
       tamanho: tal.tal,
       quantity: stok,
-      amount,
+      amount: vl,
       image: photoUrl,
       description: ctg?.description,
-      category: selectCategory,
+      category: selectCateg.item.category,
     };
+
+    console.log(rs);
 
     fire()
       .collection("model")
       .add(rs)
       .then(() => {
+        setLoad(false);
         Alert.alert("Sucesso", "Novo item salvo");
         nv.navigate("home");
-      });
-  }, [amount, category, image, nv, selectCategory, stok, tal.tal]);
+      })
+      .catch((err) => setLoad(false));
+  }, [amount, category, image, nv, selectCateg.item.category, stok, tal.tal]);
 
   const addType = useCallback(() => {
     fire().collection("type").add({ type: tp });
@@ -159,9 +198,9 @@ export function Edit() {
   }, [tp]);
 
   const addcategoria = useCallback(
-    (type: string) => {
+    (item: string) => {
       const rs = {
-        type,
+        type: item,
         description,
         category: ct,
       };
@@ -171,6 +210,87 @@ export function Edit() {
     },
     [ct, description]
   );
+
+  const handleEditType = React.useCallback(async () => {
+    if (nameType !== "") {
+      fire()
+        .collection("type")
+        .doc(selectType.item.id)
+        .update({
+          type: nameType,
+        })
+        .then((h) => {
+          list.lc.forEach((p) => {
+            fire().collection("category").doc(p.id).update({
+              type: nameType,
+            });
+          });
+          setSelect(0);
+        });
+    }
+    //   type: nameType,
+    // });
+  }, [list.lc, nameType, selectType.item.id]);
+
+  const handleDeleteType = React.useCallback(async () => {
+    if (selectType.item.id) {
+      fire()
+        .collection("type")
+        .doc(selectType.item.id)
+        .delete()
+        .then((h) => {
+          list.lc.forEach((p) => {
+            fire()
+              .collection("category")
+              .doc(p.id)
+              .delete()
+              .then((h) => console.log("ok"));
+          });
+          setSelect(0);
+        });
+    }
+  }, [list.lc, selectType.item.id]);
+
+  const handleEditCategory = React.useCallback(async () => {
+    if (ct !== "") {
+      fire()
+        .collection("category")
+        .doc(selectCateg.item.id)
+        .update({
+          category: ct,
+        })
+        .then((h) => {
+          console.log("ok");
+          list.lmo.forEach((p) => {
+            fire().collection("model").doc(p.id).update({
+              category: nameCategory,
+            });
+          });
+          setCat(0);
+          setSelect(0);
+        });
+    }
+  }, [ct, list.lmo, nameCategory, selectCateg.item.id]);
+
+  const handleDeleteCategory = React.useCallback(async () => {
+    if (selectType.item.id) {
+      fire()
+        .collection("category")
+        .doc(selectCateg.item.id)
+        .delete()
+        .then((h) => {
+          list.lc.forEach((p) => {
+            fire()
+              .collection("model")
+              .doc(p.id)
+              .delete()
+              .then((h) => setCat(0));
+          });
+          setCat(0);
+          setSelect(0);
+        });
+    }
+  }, [list.lc, selectCateg.item.id, selectType.item.id]);
 
   return (
     <S.container>
@@ -199,11 +319,11 @@ export function Edit() {
               renderItem={({ item: h }) => (
                 <Tipo
                   pres={() => {
-                    setSelecttype(h.type);
-                    setSelectCategory("");
+                    setSelecttype({ item: h });
+                    setSelectCateg({ item: {} as ICategory });
                   }}
                   title={h.type}
-                  select={selectType === h.type}
+                  select={selectType.item.type === h.type}
                 />
               )}
             />
@@ -212,8 +332,26 @@ export function Edit() {
               <Select
                 select={select === 1}
                 pres={() => setSelect(1)}
-                title="Adicionar um novo TIPO de roupa"
+                title="Novo"
               />
+
+              {selectType.item.type && (
+                <S.box>
+                  <Select
+                    select={select === 2}
+                    pres={() => {
+                      setSelect(2);
+                    }}
+                    title="Editar"
+                  />
+
+                  <Select
+                    select={select === 3}
+                    pres={() => setSelect(3)}
+                    title="Excluir"
+                  />
+                </S.box>
+              )}
             </S.boxSelect>
 
             {select === 1 && (
@@ -239,10 +377,54 @@ export function Edit() {
                 </S.contentButton>
               </View>
             )}
+
+            {select === 2 && (
+              <View>
+                <S.input
+                  onChangeText={setNameType}
+                  placeholder="digite o nome do TIPO de roupa"
+                />
+                <S.contentButton>
+                  <S.buttonSave
+                    style={{ width: 140, backgroundColor: cor.alert[2] }}
+                    onPress={() => setSelect(0)}
+                  >
+                    <S.titleSave>Cancelar</S.titleSave>
+                  </S.buttonSave>
+
+                  <S.buttonSave
+                    style={{ width: 140, backgroundColor: cor.green[2] }}
+                    onPress={handleEditType}
+                  >
+                    <S.titleSave>Salvar</S.titleSave>
+                  </S.buttonSave>
+                </S.contentButton>
+              </View>
+            )}
+
+            {select === 3 && (
+              <View>
+                <S.contentButton>
+                  <S.buttonSave
+                    style={{ width: 140, backgroundColor: cor.alert[2] }}
+                    onPress={() => setSelect(0)}
+                  >
+                    <S.titleSave>Cancelar</S.titleSave>
+                  </S.buttonSave>
+
+                  <S.buttonSave
+                    style={{ width: 140, backgroundColor: cor.green[2] }}
+                    onPress={handleDeleteType}
+                  >
+                    <S.titleSave>Excluir</S.titleSave>
+                  </S.buttonSave>
+                </S.contentButton>
+              </View>
+            )}
           </S.boxTipo>
 
           {/* CATEGORIA */}
-          {selectType !== "" && (
+          {selectType.item.type && (
             <S.boxTipo>
               <S.title
                 style={{
@@ -265,9 +447,9 @@ export function Edit() {
                 keyExtractor={(h) => h.id}
                 renderItem={({ item: h }) => (
                   <CategoryComponent
-                    pres={() => setSelectCategory(h.category)}
+                    pres={() => setSelectCateg({ item: h })}
                     title={h.category}
-                    select={selectCategory === h.category}
+                    select={selectCateg.item.category === h.category}
                   />
                 )}
               />
@@ -276,8 +458,24 @@ export function Edit() {
                 <Select
                   select={cat === 1}
                   pres={() => setCat(1)}
-                  title="Adicionar nova categoria"
+                  title="Novo"
                 />
+
+                {selectCateg.item.category && (
+                  <S.box>
+                    <Select
+                      select={cat === 2}
+                      pres={() => setCat(2)}
+                      title="Editar"
+                    />
+
+                    <Select
+                      select={cat === 3}
+                      pres={() => setCat(3)}
+                      title="Excluir"
+                    />
+                  </S.box>
+                )}
               </S.boxSelect>
 
               {cat === 1 && (
@@ -301,9 +499,54 @@ export function Edit() {
 
                     <S.buttonSave
                       style={{ width: 140, backgroundColor: cor.green[2] }}
-                      onPress={() => addcategoria(selectType)}
+                      onPress={() => addcategoria(selectType.item.type)}
                     >
                       <S.titleSave>Salvar</S.titleSave>
+                    </S.buttonSave>
+                  </S.contentButton>
+                </View>
+              )}
+
+              {cat === 2 && (
+                <View>
+                  <S.input
+                    onChangeText={setCt}
+                    placeholder="digite o nome da categoria"
+                  />
+
+                  <S.contentButton>
+                    <S.buttonSave
+                      style={{ width: 140, backgroundColor: cor.alert[2] }}
+                      onPress={() => setCat(0)}
+                    >
+                      <S.titleSave>Cancelar</S.titleSave>
+                    </S.buttonSave>
+
+                    <S.buttonSave
+                      style={{ width: 140, backgroundColor: cor.green[2] }}
+                      onPress={handleEditCategory}
+                    >
+                      <S.titleSave>Salvar</S.titleSave>
+                    </S.buttonSave>
+                  </S.contentButton>
+                </View>
+              )}
+
+              {cat === 3 && (
+                <View>
+                  <S.contentButton>
+                    <S.buttonSave
+                      style={{ width: 140, backgroundColor: cor.alert[2] }}
+                      onPress={() => setCat(0)}
+                    >
+                      <S.titleSave>Cancelar</S.titleSave>
+                    </S.buttonSave>
+
+                    <S.buttonSave
+                      style={{ width: 140, backgroundColor: cor.green[2] }}
+                      onPress={handleDeleteCategory}
+                    >
+                      <S.titleSave>Excluir</S.titleSave>
                     </S.buttonSave>
                   </S.contentButton>
                 </View>
@@ -311,7 +554,7 @@ export function Edit() {
             </S.boxTipo>
           )}
 
-          {cat === 0 && selectCategory !== "" && (
+          {cat === 0 && selectCateg.item.category && (
             <S.boxTipo>
               <S.title
                 style={{
@@ -351,15 +594,30 @@ export function Edit() {
                   select={tal.tal === "G"}
                   title="G"
                 />
+
                 <Select
                   pres={() => setTall({ tal: "GG" })}
                   select={tal.tal === "GG"}
                   title="GG"
                 />
+              </S.boxSelect>
+
+              <S.boxSelect>
                 <Select
-                  pres={() => setTall({ tal: "EG" })}
-                  select={tal.tal === "EG"}
-                  title="EG"
+                  pres={() => setTall({ tal: "G1" })}
+                  select={tal.tal === "G1"}
+                  title="G1"
+                />
+                <Select
+                  pres={() => setTall({ tal: "G2" })}
+                  select={tal.tal === "G2"}
+                  title="G2"
+                />
+
+                <Select
+                  pres={() => setTall({ tal: "G3" })}
+                  select={tal.tal === "G3"}
+                  title="G3"
                 />
               </S.boxSelect>
 
@@ -378,7 +636,11 @@ export function Edit() {
 
         {cat === 0 && (
           <S.buttonSave onPress={handleExistent}>
-            <S.titleSave>Salvar</S.titleSave>
+            {load ? (
+              <ActivityIndicator size={34} color="#fff" />
+            ) : (
+              <S.titleSave>Salvar</S.titleSave>
+            )}
           </S.buttonSave>
         )}
       </ScrollView>

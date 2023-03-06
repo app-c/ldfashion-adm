@@ -11,7 +11,7 @@ export const container = styled.TouchableOpacity`
 `;
 
 export const title = styled.Text`
-  margin-left: 10px;
+  margin-left: 4px;
 `;
 
 export const circle = styled.View`

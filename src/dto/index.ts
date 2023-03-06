@@ -12,7 +12,7 @@ export interface IModel {
   id: string;
   tamanho: "P" | "M" | "G" | "GG" | "EG";
   quantity: number;
-  amount: number;
+  amount: string;
   image: string;
   description?: string;
   category?: string;

@@ -22,6 +22,7 @@ export function Lista({ item = {} as IModel, edit, excluir }: Props) {
         <S.boxText>
           <S.title>Estoque: {item.quantity}</S.title>
           <S.title>R$ {item.amount}</S.title>
+          <S.title>Tamanho: {item.tamanho}</S.title>
 
           <S.boxButton>
             <S.button onPress={edit} color="a">

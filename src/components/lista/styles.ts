@@ -50,5 +50,6 @@ export const textButon = styled.Text`
 `;
 
 export const title = styled.Text`
-  font-size: 20px;
+  font-size: 18px;
+  font-weight: 400;
 `;

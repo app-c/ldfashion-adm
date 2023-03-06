@@ -10,7 +10,7 @@ export const boxSelect = styled.View`
   margin-top: 20px;
   width: 100%;
   flex-direction: row;
-  justify-content: space-between;
+  justify-content: space-around;
 `;
 
 export const title = styled.Text``;
@@ -82,5 +82,11 @@ export const titleSave = styled.Text`
 export const contentButton = styled.View`
   flex-direction: row;
   align-items: center;
+  justify-content: space-between;
+`;
+
+export const box = styled.View`
+  flex-direction: row;
+  width: 50%;
   justify-content: space-between;
 `;
